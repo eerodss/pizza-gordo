@@ -3,6 +3,9 @@ const WA_URL = 'https://wa.me/5544999187735';
 // Ativa o preset de fotos (bloco salvo em index.html dentro de <template id="preset-fotos">)
 const MOSTRAR_FOTOS = true;
 
+// Caminho da imagem de cada bloco do preset ("" mantém o espaço reservado)
+const FOTOS = {fachada: '', pizza: '', forno: '', equipe: '', fachada2: ''};
+
 const CAT_LABEL = {salgadas:'Salgadas', especiais:'Especiais', doces:'Doces', docesesp:'Doces especiais'};
 
 const DATA = {
@@ -388,123 +391,297 @@ function setupPresetFotos(){
   const grid = document.getElementById('aboutGrid');
   if (!tpl || !grid) return;
   const fotos = tpl.content.cloneNode(true);
+  fotos.querySelectorAll('[data-foto]').forEach(el => {
+    const src = FOTOS[el.dataset.foto];
+    if (!src) return;
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = el.querySelector('.ph-content span').textContent;
+    img.loading = 'lazy';
+    el.querySelector('.ph-content').remove();
+    el.append(img);
+  });
   const [aboutPhoto, gallery] = [fotos.querySelector('.photo-placeholder'), fotos.querySelector('.gallery-strip')];
   grid.classList.add('has-photo');
   grid.append(aboutPhoto);
   grid.after(gallery);
 }
 
-// Carrinho: guarda seleção em localStorage (só para este navegador)
-const CART_KEY = 'gordo-carrinho';
-let cart = {};
-try { cart = JSON.parse(localStorage.getItem(CART_KEY)) || {}; } catch (e) { cart = {}; }
+// Carrinho: esfihas e combos por quantidade; pizzas e pizzas de metro montadas com até N sabores.
+// Guardado em localStorage (só para este navegador).
+const CART_KEY = 'gordo-carrinho-v2';
+const SIZES = {
+  esfiha: {label: 'Esfiha', title: 'Esfihas', max: 1},
+  pizza: {label: 'Pizza', title: 'Pizzas (12 pedaços)', max: 3},
+  metro: {label: 'Pizza de Metro', title: 'Pizzas de metro (36 pedaços)', max: 4}
+};
+
+let cart = {esfihas: {}, pizzas: [], combos: {}};
+try {
+  const saved = JSON.parse(localStorage.getItem(CART_KEY));
+  if (saved && saved.esfihas && saved.combos && Array.isArray(saved.pizzas)) cart = saved;
+} catch (e) {}
 
 function saveCart(){
   try { localStorage.setItem(CART_KEY, JSON.stringify(cart)); } catch (e) {}
 }
 
+function sumQty(group){
+  return Object.values(group).reduce((n, it) => n + it.qty, 0);
+}
+
 function cartTotal(){
-  return Object.values(cart).reduce((n, it) => n + it.qty, 0);
+  return sumQty(cart.esfihas) + sumQty(cart.combos) + cart.pizzas.length;
 }
 
 function cartMessage(){
-  const lines = Object.values(cart).map(it => `- ${it.qty}x ${it.name}${it.cat ? ` (${it.cat})` : ''}`);
-  return 'Olá! Quero pedir:\n' + lines.join('\n');
+  const out = ['Olá! Quero pedir:'];
+  const esfihas = Object.values(cart.esfihas);
+  if (esfihas.length) out.push('', '*Esfihas*', ...esfihas.map(it => `- ${it.qty}x ${it.name}`));
+  ['pizza', 'metro'].forEach(size => {
+    const list = cart.pizzas.filter(p => p.size === size);
+    if (list.length) out.push('', `*${SIZES[size].title}*`, ...list.map((p, i) => `- ${SIZES[size].label} ${i + 1}: ${p.flavors.join(' + ')}`));
+  });
+  const combos = Object.values(cart.combos);
+  if (combos.length) out.push('', '*Combos*', ...combos.map(it => `- ${it.qty}x Combo ${it.name}`));
+  return out.join('\n');
+}
+
+function qtyRow(group, key, label, qty){
+  return `<li class="cart-item">
+    <div class="cart-info"><span class="cart-name">${esc(label)}</span></div>
+    <div class="cart-qty">
+      <button type="button" data-qty="${group}|${esc(key)}|-1" aria-label="Diminuir ${esc(label)}">−</button>
+      <span>${qty}</span>
+      <button type="button" data-qty="${group}|${esc(key)}|1" aria-label="Aumentar ${esc(label)}"><svg class="ico"><use href="#i-plus"/></svg></button>
+    </div>
+  </li>`;
+}
+
+function pizzaRow(p, n){
+  const name = `${SIZES[p.size].label} ${n}`;
+  return `<li class="cart-item">
+    <div class="cart-info">
+      <span class="cart-name">${name}</span>
+      <span class="cart-cat">${p.flavors.map(f => esc(f)).join(' + ')}</span>
+    </div>
+    <button type="button" class="cart-remove" data-remove-pizza="${p.id}" aria-label="Remover ${name}"><svg class="ico"><use href="#i-trash"/></svg></button>
+  </li>`;
+}
+
+function cartGroup(title, rows){
+  return rows.length ? `<li class="cart-group"><h5>${title}</h5><ul>${rows.join('')}</ul></li>` : '';
 }
 
 function renderCart(){
-  const list = document.getElementById('cartList');
-  const empty = document.getElementById('cartEmpty');
-  const count = document.getElementById('cartCount');
-  const send = document.getElementById('cartSend');
-  const sub = document.getElementById('cartSub');
-  const items = Object.entries(cart);
   const total = cartTotal();
+  document.getElementById('cartList').innerHTML =
+    cartGroup(SIZES.esfiha.title, Object.entries(cart.esfihas).map(([k, it]) => qtyRow('esfihas', k, it.name, it.qty))) +
+    ['pizza', 'metro'].map(size =>
+      cartGroup(SIZES[size].title, cart.pizzas.filter(p => p.size === size).map((p, i) => pizzaRow(p, i + 1)))
+    ).join('') +
+    cartGroup('Combos', Object.entries(cart.combos).map(([k, it]) => qtyRow('combos', k, 'Combo ' + it.name, it.qty)));
 
-  sub.textContent = total ? `${total} ${total === 1 ? 'item' : 'itens'}` : 'Nenhum item ainda';
-
-  list.innerHTML = items.map(([key, it]) => `
-    <li class="cart-item">
-      <div class="cart-info">
-        <span class="cart-name">${esc(it.name)}</span>
-        ${it.cat ? `<span class="cart-cat">${esc(it.cat)}</span>` : ''}
-      </div>
-      <div class="cart-qty">
-        <button type="button" data-dec="${esc(key)}" aria-label="Diminuir ${esc(it.name)}">−</button>
-        <span>${it.qty}</span>
-        <button type="button" data-inc="${esc(key)}" aria-label="Aumentar ${esc(it.name)}"><svg class="ico"><use href="#i-plus"/></svg></button>
-      </div>
-    </li>
-  `).join('');
-
-  empty.hidden = items.length > 0;
+  document.getElementById('cartSub').textContent = total ? `${total} ${total === 1 ? 'item' : 'itens'}` : 'Nenhum item ainda';
+  document.getElementById('cartEmpty').hidden = total > 0;
+  const count = document.getElementById('cartCount');
   count.textContent = total;
   count.hidden = total === 0;
-  send.href = total ? waLink(cartMessage()) : WA_URL;
-  document.getElementById('cartClear').hidden = !items.length;
+  document.getElementById('cartSend').href = total ? waLink(cartMessage()) : WA_URL;
+  document.getElementById('cartClear').hidden = total === 0;
 }
 
-function changeCart(key, name, cat, delta){
-  const current = cart[key] ? cart[key].qty : 0;
-  const qty = current + delta;
-  if (qty <= 0) delete cart[key];
-  else cart[key] = {name, cat, qty};
-  saveCart();
-  renderCart();
+function changeQty(group, key, delta){
+  const it = cart[group][key];
+  if (!it) return;
+  it.qty += delta;
+  if (it.qty <= 0) delete cart[group][key];
+  saveCart(); renderCart();
+}
+
+function addQty(group, name, qty){
+  const it = cart[group][name] || (cart[group][name] = {name, qty: 0});
+  it.qty += qty;
+  saveCart(); renderCart();
+}
+
+function addPizza(size, flavors){
+  cart.pizzas.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), size, flavors: [...flavors]});
+  saveCart(); renderCart();
+}
+
+function removePizza(id){
+  cart.pizzas = cart.pizzas.filter(p => p.id !== id);
+  saveCart(); renderCart();
+}
+
+function findFlavor(name){
+  for (const k in DATA) {
+    const it = DATA[k].items.find(x => x[0] === name);
+    if (it) return it;
+  }
+  return null;
+}
+
+// Sabores marcados como exclusivos de esfiha não entram em pizza
+function esfihaOnly(name){
+  const it = findFlavor(name);
+  return !!it && /exclusivo p\/ esfiha/i.test(it[1]);
+}
+
+function flavorOptions(chosen){
+  return Object.keys(DATA).map(k => {
+    const opts = DATA[k].items
+      .filter(it => !chosen.includes(it[0]) && !esfihaOnly(it[0]))
+      .map(it => `<option value="${esc(it[0])}">${esc(it[0])}</option>`).join('');
+    return opts ? `<optgroup label="${CAT_LABEL[k]}">${opts}</optgroup>` : '';
+  }).join('');
 }
 
 function setupCart(){
   const panel = document.getElementById('cart');
   const overlay = document.getElementById('cartOverlay');
-  const open = () => {
+  const openCart = () => {
     panel.classList.add('open'); overlay.classList.add('open');
     panel.setAttribute('aria-hidden', 'false');
     document.getElementById('cartClose').focus();
   };
-  const close = () => {
+  const closeCart = () => {
     panel.classList.remove('open'); overlay.classList.remove('open');
     panel.setAttribute('aria-hidden', 'true');
     document.getElementById('cartBtn').focus();
   };
-  document.getElementById('cartBtn').addEventListener('click', open);
-  document.getElementById('cartClose').addEventListener('click', close);
-  overlay.addEventListener('click', close);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && panel.classList.contains('open')) close(); });
+  document.getElementById('cartBtn').addEventListener('click', openCart);
+  document.getElementById('cartClose').addEventListener('click', closeCart);
+  overlay.addEventListener('click', closeCart);
 
   // Aviso de item adicionado, com atalho para abrir o carrinho
   const toast = document.getElementById('toast');
   let toastTimer;
   const hideToast = () => toast.classList.remove('show');
-  const showToast = name => {
-    document.getElementById('toastText').textContent = `${name} foi adicionado ao carrinho`;
+  const showToast = text => {
+    document.getElementById('toastText').textContent = text;
     toast.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(hideToast, 4000);
   };
-  document.getElementById('toastOpen').addEventListener('click', () => { hideToast(); open(); });
+  document.getElementById('toastOpen').addEventListener('click', () => { hideToast(); openCart(); });
 
-  // Botão Adicionar nos cards (sabores e combos)
+  // Montagem do pedido: tamanho (esfiha, pizza ou metro) e sabores
+  const builderEl = document.getElementById('builder');
+  const builderOverlay = document.getElementById('builderOverlay');
+  const select = document.getElementById('builderSelect');
+  let b = null, opener = null, lastSize = 'pizza';
+
+  const renderBuilder = () => {
+    document.getElementById('builderTitle').textContent = b.flavors[0];
+    builderEl.querySelectorAll('[data-size]').forEach(btn => {
+      const on = btn.dataset.size === b.size;
+      btn.classList.toggle('active', on);
+      btn.setAttribute('aria-checked', on);
+      btn.disabled = b.only && btn.dataset.size !== 'esfiha';
+    });
+    const isEsfiha = b.size === 'esfiha';
+    document.getElementById('builderEsfiha').hidden = !isEsfiha;
+    document.getElementById('builderPizza').hidden = isEsfiha;
+    if (isEsfiha) {
+      document.getElementById('builderQty').textContent = b.qty;
+      return;
+    }
+    const max = SIZES[b.size].max, full = b.flavors.length >= max;
+    document.getElementById('builderCount').textContent = `Sabores (${b.flavors.length}/${max})`;
+    document.getElementById('builderChips').innerHTML = b.flavors.map((f, i) => `
+      <li class="flavor-chip"><span>${esc(f)}</span>${b.flavors.length > 1
+        ? `<button type="button" data-flavor-remove="${i}" aria-label="Remover ${esc(f)}"><svg class="ico"><use href="#i-close"/></svg></button>` : ''}</li>`
+    ).join('');
+    select.innerHTML = '<option value="">Escolha outro sabor…</option>' + flavorOptions(b.flavors);
+    select.disabled = full;
+    document.getElementById('builderHint').textContent = full
+      ? 'Limite de sabores atingido para este tamanho.'
+      : `Você pode misturar até ${max} sabores.`;
+  };
+
+  const openBuilder = (name, from) => {
+    const only = esfihaOnly(name);
+    b = {size: only ? 'esfiha' : lastSize, qty: 1, flavors: [name], only};
+    opener = from;
+    renderBuilder();
+    builderEl.classList.add('open'); builderOverlay.classList.add('open');
+    builderEl.setAttribute('aria-hidden', 'false');
+    (builderEl.querySelector('[data-size].active') || builderEl.querySelector('[data-size]')).focus();
+  };
+  const closeBuilder = () => {
+    builderEl.classList.remove('open'); builderOverlay.classList.remove('open');
+    builderEl.setAttribute('aria-hidden', 'true');
+    if (opener) opener.focus();
+    b = null;
+  };
+
+  document.getElementById('builderClose').addEventListener('click', closeBuilder);
+  builderOverlay.addEventListener('click', closeBuilder);
+  builderEl.querySelectorAll('[data-size]').forEach(btn => btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    b.size = btn.dataset.size; lastSize = b.size;
+    if (b.size !== 'esfiha') b.flavors = b.flavors.slice(0, SIZES[b.size].max);
+    renderBuilder();
+  }));
+  document.getElementById('builderMinus').addEventListener('click', () => { b.qty = Math.max(1, b.qty - 1); renderBuilder(); });
+  document.getElementById('builderPlus').addEventListener('click', () => { b.qty = Math.min(99, b.qty + 1); renderBuilder(); });
+  select.addEventListener('change', () => {
+    if (select.value && b.flavors.length < SIZES[b.size].max) b.flavors.push(select.value);
+    renderBuilder();
+  });
+  document.getElementById('builderChips').addEventListener('click', e => {
+    const rm = e.target.closest('[data-flavor-remove]');
+    if (!rm) return;
+    b.flavors.splice(Number(rm.dataset.flavorRemove), 1);
+    renderBuilder();
+  });
+  document.getElementById('builderConfirm').addEventListener('click', () => {
+    let text;
+    if (b.size === 'esfiha') {
+      addQty('esfihas', b.flavors[0], b.qty);
+      text = `Esfiha de ${b.flavors[0]} (${b.qty}x) foi adicionada ao carrinho`;
+    } else {
+      addPizza(b.size, b.flavors);
+      text = `${SIZES[b.size].label} (${b.flavors.join(' + ')}) foi adicionada ao carrinho`;
+    }
+    closeBuilder();
+    showToast(text);
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (builderEl.classList.contains('open')) closeBuilder();
+    else if (panel.classList.contains('open')) closeCart();
+  });
+
   document.addEventListener('click', e => {
     const add = e.target.closest('[data-add]');
     if (add) {
-      const name = add.dataset.add, cat = add.dataset.cat;
-      changeCart(cat + '|' + name, name, cat, 1);
-      add.classList.add('added');
-      setTimeout(() => add.classList.remove('added'), 600);
-      showToast(name);
+      if (add.dataset.cat === 'Combo') {
+        addQty('combos', add.dataset.add, 1);
+        add.classList.add('added');
+        setTimeout(() => add.classList.remove('added'), 600);
+        showToast(`Combo ${add.dataset.add} foi adicionado ao carrinho`);
+      } else {
+        openBuilder(add.dataset.add, add);
+      }
       return;
     }
-    const inc = e.target.closest('[data-inc]');
-    const dec = e.target.closest('[data-dec]');
-    if (inc || dec) {
-      const key = (inc || dec).dataset[inc ? 'inc' : 'dec'];
-      const it = cart[key];
-      if (it) changeCart(key, it.name, it.cat, inc ? 1 : -1);
+    const qty = e.target.closest('[data-qty]');
+    if (qty) {
+      const [group, key, delta] = qty.dataset.qty.split('|');
+      changeQty(group, key, Number(delta));
+      return;
     }
+    const rm = e.target.closest('[data-remove-pizza]');
+    if (rm) removePizza(rm.dataset.removePizza);
   });
 
   document.getElementById('cartClear').addEventListener('click', () => {
-    cart = {}; saveCart(); renderCart();
+    cart = {esfihas: {}, pizzas: [], combos: {}};
+    saveCart(); renderCart();
   });
 
   renderCart();

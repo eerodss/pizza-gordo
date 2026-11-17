@@ -45,6 +45,7 @@
     <a href="#top10">Top 10</a>
     <a href="#cardapio">Cardápio</a>
     <a href="#combos">Combos</a>
+    <a href="#mini-pizza">Mini Pizza</a>
     <a href="#contato">Contato</a>
   </div>
   <div class="header-actions">
@@ -111,17 +112,16 @@
 -->
 <template id="preset-fotos">
   <div class="photo-placeholder reveal" data-foto="fachada">
-    <img src="" alt="Foto da pizzaria" hidden>
     <div class="ph-content">
       <i class="ti ti-photo"></i>
       <span>Foto da pizzaria</span>
     </div>
   </div>
   <div class="gallery-strip">
-    <div class="photo-placeholder square reveal" data-foto="pizza"><img src="" alt="Foto da pizza" hidden><div class="ph-content"><i class="ti ti-pizza"></i><span>Foto da pizza</span></div></div>
-    <div class="photo-placeholder square reveal" data-foto="forno"><img src="" alt="Foto do forno" hidden><div class="ph-content"><i class="ti ti-flame"></i><span>Foto do forno</span></div></div>
-    <div class="photo-placeholder square reveal" data-foto="equipe"><img src="" alt="Foto da equipe" hidden><div class="ph-content"><i class="ti ti-chef-hat"></i><span>Foto da equipe</span></div></div>
-    <div class="photo-placeholder square reveal" data-foto="fachada2"><img src="" alt="Foto da fachada" hidden><div class="ph-content"><i class="ti ti-building-store"></i><span>Foto da fachada</span></div></div>
+    <div class="photo-placeholder square reveal" data-foto="pizza"><div class="ph-content"><i class="ti ti-pizza"></i><span>Foto da pizza</span></div></div>
+    <div class="photo-placeholder square reveal" data-foto="forno"><div class="ph-content"><i class="ti ti-flame"></i><span>Foto do forno</span></div></div>
+    <div class="photo-placeholder square reveal" data-foto="equipe"><div class="ph-content"><i class="ti ti-chef-hat"></i><span>Foto da equipe</span></div></div>
+    <div class="photo-placeholder square reveal" data-foto="fachada2"><div class="ph-content"><i class="ti ti-building-store"></i><span>Foto da fachada</span></div></div>
   </div>
 </template>
 
@@ -196,6 +196,27 @@
     <p>Até 4 sabores tradicionais por combo</p>
   </div>
   <div class="combo-grid" id="combosWrap"></div>
+</section>
+
+<hr class="full-divider">
+
+<!-- Mini pizza congelada: textos, fotos e locais de venda ficam em mini-pizza.js -->
+<section id="mini-pizza">
+  <div class="section-head reveal">
+    <span class="eyebrow">Novidade</span>
+    <h3>Mini Pizza Congelada</h3>
+    <p>A mini pizza do Gordo agora também congelada, à venda na pizzaria e em supermercados.</p>
+  </div>
+  <div class="mini-gallery" id="miniGallery"></div>
+  <div class="mini-flavors" id="miniFlavors" hidden></div>
+  <div class="section-head mini-where reveal">
+    <h4>Onde encontrar</h4>
+    <p>Veja no mapa a pizzaria e os supermercados que vendem.</p>
+  </div>
+  <div class="mini-map-wrap reveal">
+    <div class="mini-map" id="miniMap" aria-label="Mapa dos locais que vendem a mini pizza congelada"></div>
+    <ul class="mini-places" id="miniPlaces"></ul>
+  </div>
 </section>
 
 <hr class="full-divider">
@@ -333,12 +354,52 @@
   </div>
 </aside>
 
+<div class="builder-overlay" id="builderOverlay"></div>
+<div class="builder" id="builder" role="dialog" aria-modal="true" aria-labelledby="builderTitle" aria-hidden="true">
+  <div class="cart-head">
+    <div>
+      <span class="cart-kicker">Montar pedido</span>
+      <h4 id="builderTitle">Sabor</h4>
+    </div>
+    <button type="button" class="cart-x" id="builderClose" aria-label="Fechar"><svg class="ico"><use href="#i-close"/></svg></button>
+  </div>
+
+  <p class="builder-label" id="sizeLabel">Escolha o tamanho</p>
+  <div class="size-pick" role="radiogroup" aria-labelledby="sizeLabel">
+    <button type="button" role="radio" aria-checked="false" data-size="esfiha">Esfiha<small>1 sabor</small></button>
+    <button type="button" role="radio" aria-checked="false" data-size="pizza">Pizza<small>12 pedaços · até 3 sabores</small></button>
+    <button type="button" role="radio" aria-checked="false" data-size="metro">Pizza de Metro<small>36 pedaços · até 4 sabores</small></button>
+  </div>
+
+  <div id="builderEsfiha" hidden>
+    <p class="builder-label">Quantidade</p>
+    <div class="builder-qty">
+      <button type="button" id="builderMinus" aria-label="Diminuir quantidade">−</button>
+      <span id="builderQty">1</span>
+      <button type="button" id="builderPlus" aria-label="Aumentar quantidade"><svg class="ico"><use href="#i-plus"/></svg></button>
+    </div>
+  </div>
+
+  <div id="builderPizza" hidden>
+    <p class="builder-label" id="builderCount">Sabores</p>
+    <ul class="flavor-chips" id="builderChips"></ul>
+    <label class="visually-hidden" for="builderSelect">Adicionar outro sabor</label>
+    <select id="builderSelect"></select>
+    <p class="builder-hint" id="builderHint"></p>
+  </div>
+
+  <div class="builder-foot">
+    <button type="button" class="cart-send" id="builderConfirm"><svg class="ico"><use href="#i-cart"/></svg> Adicionar ao carrinho</button>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite">
   <span id="toastText"></span>
   <button type="button" id="toastOpen">Ver carrinho</button>
 </div>
 
 <script src="script.js"></script>
+<script src="mini-pizza.js"></script>
 
 </body>
 </html>
