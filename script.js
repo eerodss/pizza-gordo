@@ -125,7 +125,7 @@ function renderItems(items, catLabel){
         ${TOP10.includes(it[0]) ? '<span class="tag">Top 10</span>' : ''}
       </div>
       <div class="item-body">
-        <h4>${it[0]}</h4>
+        <h3>${it[0]}</h3>
         <p>${it[1]}</p>
         ${it[4] ? `<p class="price">Pizza a partir de ${it[4]}</p>` : ''}
         <div class="item-actions">
@@ -150,7 +150,7 @@ function buildMenu(){
     <div class="borda-grid">
     ${BORDAS.map(b => `
       <div class="borda-table">
-        <h4>${b.title}</h4>
+        <h3>${b.title}</h3>
         ${b.rows.map(r => `<div class="borda-row"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('')}
       </div>
     `).join('')}
@@ -189,7 +189,7 @@ function buildMenu(){
     return `<div class="top-card reveal">
       <div class="top-num">${String(i + 1).padStart(2, '0')}</div>
       ${it[3] ? `<img class="top-img" src="${it[3]}" alt="${name}" loading="lazy">` : ''}
-      <div class="top-body"><h4>${name}</h4><p>${it[1]}</p>${it[4] ? `<p class="tp">Pizza a partir de ${it[4]}</p>` : ''}</div>
+      <div class="top-body"><h3>${name}</h3><p>${it[1]}</p>${it[4] ? `<p class="tp">Pizza a partir de ${it[4]}</p>` : ''}</div>
     </div>`;
   }).join('');
 
@@ -328,12 +328,12 @@ function setupSearch(){
     let html = '', total = 0;
     for (const k in DATA) {
       const hits = DATA[k].items.filter(it => match(it[0] + ' ' + it[1]));
-      if (hits.length) { total += hits.length; html += `<h5 class="res-title">${CATS[k]}</h5>` + renderItems(hits, CAT_LABEL[k]); }
+      if (hits.length) { total += hits.length; html += `<h3 class="res-title">${CATS[k]}</h3>` + renderItems(hits, CAT_LABEL[k]); }
     }
     const drinks = DRINKS.filter(d => match(d[0] + ' ' + d[1]));
     if (drinks.length) {
       total += drinks.length;
-      html += '<h5 class="res-title">Bebidas</h5><div class="drinks-grid">' + drinks.map(d => `
+      html += '<h3 class="res-title">Bebidas</h3><div class="drinks-grid">' + drinks.map(d => `
         <div class="drink-row"><div><div class="dn">${d[0]}</div><div class="dv">${d[1]}</div></div><div class="dp">${d[2]}</div></div>`).join('') + '</div>';
     }
     menu.hidden = true; res.hidden = false;
@@ -470,7 +470,7 @@ function pizzaRow(p, n){
 }
 
 function cartGroup(title, rows){
-  return rows.length ? `<li class="cart-group"><h5>${title}</h5><ul>${rows.join('')}</ul></li>` : '';
+  return rows.length ? `<li class="cart-group"><h4>${title}</h4><ul>${rows.join('')}</ul></li>` : '';
 }
 
 function renderCart(){
@@ -494,14 +494,14 @@ function renderCart(){
 function changeQty(group, key, delta){
   const it = cart[group][key];
   if (!it) return;
-  it.qty += delta;
+  it.qty = Math.min(99, it.qty + delta);
   if (it.qty <= 0) delete cart[group][key];
   saveCart(); renderCart();
 }
 
 function addQty(group, name, qty){
   const it = cart[group][name] || (cart[group][name] = {name, qty: 0});
-  it.qty += qty;
+  it.qty = Math.min(99, it.qty + qty);
   saveCart(); renderCart();
 }
 
@@ -536,6 +536,17 @@ function flavorOptions(chosen){
       .map(it => `<option value="${esc(it[0])}">${esc(it[0])}</option>`).join('');
     return opts ? `<optgroup label="${CAT_LABEL[k]}">${opts}</optgroup>` : '';
   }).join('');
+}
+
+// Mantém o Tab dentro da janela aberta (carrinho ou montagem do pedido)
+function trapFocus(el, e){
+  if (e.key !== 'Tab') return;
+  const items = [...el.querySelectorAll('a[href],button:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+    .filter(x => x.offsetParent !== null);
+  if (!items.length) return;
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
 }
 
 function setupCart(){
@@ -683,6 +694,9 @@ function setupCart(){
     cart = {esfihas: {}, pizzas: [], combos: {}};
     saveCart(); renderCart();
   });
+
+  panel.addEventListener('keydown', e => trapFocus(panel, e));
+  builderEl.addEventListener('keydown', e => trapFocus(builderEl, e));
 
   renderCart();
 }
