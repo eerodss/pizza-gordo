@@ -1711,3 +1711,49 @@ p { text-wrap: pretty; }
   .cat-tab, .mini-place a { min-height: 44px; }
   .mini-place a { align-items: center; }
 }
+
+/* ===== Seletor de sabor igual aos sabores escolhidos ===== */
+.flavor-chip { min-height: 50px; }
+#builderSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 44px 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background-color: var(--navy-deep);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e2ffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px;
+  color: var(--cream);
+  font: 600 14px 'Montserrat', sans-serif;
+  cursor: pointer;
+}
+#builderSelect:hover:not(:disabled) { border-color: var(--line-strong); }
+#builderSelect:focus-visible { outline: 2px solid var(--cream); outline-offset: 2px; }
+
+/* ===== Voltar ao topo, acima do WhatsApp flutuante ===== */
+.to-top {
+  position: fixed;
+  right: 20px;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 90;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--navy-deeper);
+  color: var(--cream);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  text-decoration: none;
+  transition: transform 0.15s, background 0.2s;
+}
+.to-top:hover { background: var(--navy-deep); transform: translateY(-2px); }
+.to-top .ico { width: 22px; height: 22px; }
+
+#builderSelect { min-height: 52px; }

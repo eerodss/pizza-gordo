@@ -6,6 +6,20 @@ const MOSTRAR_FOTOS = true;
 // Caminho da imagem de cada bloco do preset ("" mantém o espaço reservado)
 const FOTOS = {fachada: '', pizza: '', forno: '', equipe: '', fachada2: ''};
 
+// Fotos ilustrativas temporárias de alguns sabores (veja images/LEIA-ME.md). Troque pelas fotos reais.
+const FOTOS_SABORES = {
+  'Margherita': 'images/pizza-3.jpg',
+  'Calabresa': 'images/pizza-6.jpg',
+  'Catfrango': 'images/pizza-1.jpg',
+  'Quatro Queijos': 'images/pizza-4.jpg',
+  'Cinco Queijos': 'images/pizza-5.jpg',
+  'Palmito Cremoso': 'images/pizza-2.jpg'
+};
+
+function flavorPhoto(it){
+  return it[3] || FOTOS_SABORES[it[0]] || '';
+}
+
 const CAT_LABEL = {salgadas:'Salgadas', especiais:'Especiais', doces:'Doces', docesesp:'Doces especiais'};
 
 const DATA = {
@@ -121,7 +135,7 @@ function renderItems(items, catLabel){
   return '<div class="item-grid">' + items.map(it => `
     <article class="item-card">
       <div class="item-photo">
-        ${it[3] ? `<img src="${it[3]}" alt="${it[0]}" loading="lazy">` : '<i class="ti ti-photo"></i>'}
+        ${flavorPhoto(it) ? `<img src="${flavorPhoto(it)}" alt="${esc(it[0])} (foto ilustrativa)" loading="lazy">` : '<i class="ti ti-photo"></i>'}
         ${TOP10.includes(it[0]) ? '<span class="tag">Top 10</span>' : ''}
       </div>
       <div class="item-body">
@@ -177,7 +191,7 @@ function buildMenu(){
       <div class="cd">${c[1]}</div>
       <div class="cp">${c[2]}</div>
       <div class="item-actions">
-        <button type="button" class="add-btn" data-add="${esc(c[0])}" data-cat="Combo" aria-label="Adicionar ${esc(c[0])} ao carrinho"><svg class="ico"><use href="#i-cart"/></svg> Adicionar</button>
+        <button type="button" class="add-btn" data-add="${esc(c[0])}" data-cat="Combo" aria-label="Escolher sabores do combo ${esc(c[0])}"><svg class="ico"><use href="#i-cart"/></svg> Escolher sabores</button>
       </div>
     </div>
   `).join('');
@@ -188,7 +202,7 @@ function buildMenu(){
     if (!it) return '';
     return `<div class="top-card reveal">
       <div class="top-num">${String(i + 1).padStart(2, '0')}</div>
-      ${it[3] ? `<img class="top-img" src="${it[3]}" alt="${name}" loading="lazy">` : ''}
+      ${flavorPhoto(it) ? `<img class="top-img" src="${flavorPhoto(it)}" alt="${esc(name)} (foto ilustrativa)" loading="lazy">` : ''}
       <div class="top-body"><h3>${name}</h3><p>${it[1]}</p>${it[4] ? `<p class="tp">Pizza a partir de ${it[4]}</p>` : ''}</div>
     </div>`;
   }).join('');
@@ -407,19 +421,20 @@ function setupPresetFotos(){
   grid.after(gallery);
 }
 
-// Carrinho: esfihas e combos por quantidade; pizzas e pizzas de metro montadas com até N sabores.
+// Carrinho: esfihas por quantidade; pizzas, pizzas de metro e combos montados com sabores.
 // Guardado em localStorage (só para este navegador).
-const CART_KEY = 'gordo-carrinho-v2';
+const CART_KEY = 'gordo-carrinho-v3';
 const SIZES = {
   esfiha: {label: 'Esfiha', title: 'Esfihas', max: 1},
   pizza: {label: 'Pizza', title: 'Pizzas (12 pedaços)', max: 3},
-  metro: {label: 'Pizza de Metro', title: 'Pizzas de metro (36 pedaços)', max: 4}
+  metro: {label: 'Pizza de Metro', title: 'Pizzas de metro (36 pedaços)', max: 4},
+  combo: {label: 'Combo', title: 'Combos', max: 4}
 };
 
-let cart = {esfihas: {}, pizzas: [], combos: {}};
+let cart = {esfihas: {}, pizzas: [], combos: []};
 try {
   const saved = JSON.parse(localStorage.getItem(CART_KEY));
-  if (saved && saved.esfihas && saved.combos && Array.isArray(saved.pizzas)) cart = saved;
+  if (saved && saved.esfihas && Array.isArray(saved.combos) && Array.isArray(saved.pizzas)) cart = saved;
 } catch (e) {}
 
 function saveCart(){
@@ -431,7 +446,7 @@ function sumQty(group){
 }
 
 function cartTotal(){
-  return sumQty(cart.esfihas) + sumQty(cart.combos) + cart.pizzas.length;
+  return sumQty(cart.esfihas) + cart.combos.length + cart.pizzas.length;
 }
 
 function cartMessage(){
@@ -442,8 +457,7 @@ function cartMessage(){
     const list = cart.pizzas.filter(p => p.size === size);
     if (list.length) out.push('', `*${SIZES[size].title}*`, ...list.map((p, i) => `- ${SIZES[size].label} ${i + 1}: ${p.flavors.join(' + ')}`));
   });
-  const combos = Object.values(cart.combos);
-  if (combos.length) out.push('', '*Combos*', ...combos.map(it => `- ${it.qty}x Combo ${it.name}`));
+  if (cart.combos.length) out.push('', '*Combos*', ...cart.combos.map(c => `- Combo ${c.name}: ${c.flavors.join(' + ')}`));
   return out.join('\n');
 }
 
@@ -458,14 +472,14 @@ function qtyRow(group, key, label, qty){
   </li>`;
 }
 
-function pizzaRow(p, n){
-  const name = `${SIZES[p.size].label} ${n}`;
+// Linha de item montado com sabores (pizza, pizza de metro ou combo)
+function choiceRow(name, flavors, removeAttr, id){
   return `<li class="cart-item">
     <div class="cart-info">
-      <span class="cart-name">${name}</span>
-      <span class="cart-cat">${p.flavors.map(f => esc(f)).join(' + ')}</span>
+      <span class="cart-name">${esc(name)}</span>
+      <span class="cart-cat">${flavors.map(f => esc(f)).join(' + ')}</span>
     </div>
-    <button type="button" class="cart-remove" data-remove-pizza="${p.id}" aria-label="Remover ${name}"><svg class="ico"><use href="#i-trash"/></svg></button>
+    <button type="button" class="cart-remove" ${removeAttr}="${id}" aria-label="Remover ${esc(name)}"><svg class="ico"><use href="#i-trash"/></svg></button>
   </li>`;
 }
 
@@ -478,9 +492,10 @@ function renderCart(){
   document.getElementById('cartList').innerHTML =
     cartGroup(SIZES.esfiha.title, Object.entries(cart.esfihas).map(([k, it]) => qtyRow('esfihas', k, it.name, it.qty))) +
     ['pizza', 'metro'].map(size =>
-      cartGroup(SIZES[size].title, cart.pizzas.filter(p => p.size === size).map((p, i) => pizzaRow(p, i + 1)))
+      cartGroup(SIZES[size].title, cart.pizzas.filter(p => p.size === size).map((p, i) =>
+        choiceRow(`${SIZES[size].label} ${i + 1}`, p.flavors, 'data-remove-pizza', p.id)))
     ).join('') +
-    cartGroup('Combos', Object.entries(cart.combos).map(([k, it]) => qtyRow('combos', k, 'Combo ' + it.name, it.qty)));
+    cartGroup('Combos', cart.combos.map(c => choiceRow(`Combo ${c.name}`, c.flavors, 'data-remove-combo', c.id)));
 
   document.getElementById('cartSub').textContent = total ? `${total} ${total === 1 ? 'item' : 'itens'}` : 'Nenhum item ainda';
   document.getElementById('cartEmpty').hidden = total > 0;
@@ -505,13 +520,22 @@ function addQty(group, name, qty){
   saveCart(); renderCart();
 }
 
+function newId(){
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
 function addPizza(size, flavors){
-  cart.pizzas.push({id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), size, flavors: [...flavors]});
+  cart.pizzas.push({id: newId(), size, flavors: [...flavors]});
   saveCart(); renderCart();
 }
 
-function removePizza(id){
-  cart.pizzas = cart.pizzas.filter(p => p.id !== id);
+function addCombo(name, flavors){
+  cart.combos.push({id: newId(), name, flavors: [...flavors]});
+  saveCart(); renderCart();
+}
+
+function removeById(list, id){
+  cart[list] = cart[list].filter(x => x.id !== id);
   saveCart(); renderCart();
 }
 
@@ -529,10 +553,11 @@ function esfihaOnly(name){
   return !!it && /exclusivo p\/ esfiha/i.test(it[1]);
 }
 
-function flavorOptions(chosen){
-  return Object.keys(DATA).map(k => {
+// Opções do seletor de sabores. Combos usam só os sabores tradicionais (inclui os exclusivos de esfiha).
+function flavorOptions(chosen, isCombo){
+  return Object.keys(DATA).filter(k => !isCombo || k === 'salgadas').map(k => {
     const opts = DATA[k].items
-      .filter(it => !chosen.includes(it[0]) && !esfihaOnly(it[0]))
+      .filter(it => !chosen.includes(it[0]) && (isCombo || !esfihaOnly(it[0])))
       .map(it => `<option value="${esc(it[0])}">${esc(it[0])}</option>`).join('');
     return opts ? `<optgroup label="${CAT_LABEL[k]}">${opts}</optgroup>` : '';
   }).join('');
@@ -578,14 +603,17 @@ function setupCart(){
   };
   document.getElementById('toastOpen').addEventListener('click', () => { hideToast(); openCart(); });
 
-  // Montagem do pedido: tamanho (esfiha, pizza ou metro) e sabores
+  // Montagem do pedido: tamanho (esfiha, pizza ou metro) e sabores; combos só escolhem sabores
   const builderEl = document.getElementById('builder');
   const builderOverlay = document.getElementById('builderOverlay');
   const select = document.getElementById('builderSelect');
   let b = null, opener = null, lastSize = 'pizza';
 
   const renderBuilder = () => {
-    document.getElementById('builderTitle').textContent = b.flavors[0];
+    const isCombo = b.mode === 'combo';
+    document.getElementById('builderTitle').textContent = isCombo ? `Combo ${b.combo}` : b.flavors[0];
+    document.getElementById('sizeLabel').hidden = isCombo;
+    document.getElementById('sizePick').hidden = isCombo;
     builderEl.querySelectorAll('[data-size]').forEach(btn => {
       const on = btn.dataset.size === b.size;
       btn.classList.toggle('active', on);
@@ -595,6 +623,8 @@ function setupCart(){
     const isEsfiha = b.size === 'esfiha';
     document.getElementById('builderEsfiha').hidden = !isEsfiha;
     document.getElementById('builderPizza').hidden = isEsfiha;
+    const confirm = document.getElementById('builderConfirm');
+    confirm.disabled = isCombo && b.flavors.length === 0;
     if (isEsfiha) {
       document.getElementById('builderQty').textContent = b.qty;
       return;
@@ -602,24 +632,28 @@ function setupCart(){
     const max = SIZES[b.size].max, full = b.flavors.length >= max;
     document.getElementById('builderCount').textContent = `Sabores (${b.flavors.length}/${max})`;
     document.getElementById('builderChips').innerHTML = b.flavors.map((f, i) => `
-      <li class="flavor-chip"><span>${esc(f)}</span>${b.flavors.length > 1
+      <li class="flavor-chip"><span>${esc(f)}</span>${(isCombo || b.flavors.length > 1)
         ? `<button type="button" data-flavor-remove="${i}" aria-label="Remover ${esc(f)}"><svg class="ico"><use href="#i-close"/></svg></button>` : ''}</li>`
     ).join('');
-    select.innerHTML = '<option value="">Escolha outro sabor…</option>' + flavorOptions(b.flavors);
+    select.innerHTML = `<option value="">${b.flavors.length ? 'Adicionar outro sabor' : 'Escolha um sabor'}</option>` + flavorOptions(b.flavors, isCombo);
     select.disabled = full;
     document.getElementById('builderHint').textContent = full
-      ? 'Limite de sabores atingido para este tamanho.'
-      : `Você pode misturar até ${max} sabores.`;
+      ? (isCombo ? 'Limite de sabores do combo atingido.' : 'Limite de sabores atingido para este tamanho.')
+      : (isCombo ? `Escolha de 1 a ${max} sabores tradicionais.` : `Você pode misturar até ${max} sabores.`);
   };
 
-  const openBuilder = (name, from) => {
-    const only = esfihaOnly(name);
-    b = {size: only ? 'esfiha' : lastSize, qty: 1, flavors: [name], only};
+  const openBuilder = (name, from, isCombo) => {
+    if (isCombo) {
+      b = {mode: 'combo', combo: name, size: 'combo', qty: 1, flavors: [], only: false};
+    } else {
+      const only = esfihaOnly(name);
+      b = {mode: 'flavor', size: only ? 'esfiha' : lastSize, qty: 1, flavors: [name], only};
+    }
     opener = from;
     renderBuilder();
     builderEl.classList.add('open'); builderOverlay.classList.add('open');
     builderEl.setAttribute('aria-hidden', 'false');
-    (builderEl.querySelector('[data-size].active') || builderEl.querySelector('[data-size]')).focus();
+    (isCombo ? select : (builderEl.querySelector('[data-size].active') || builderEl.querySelector('[data-size]'))).focus();
   };
   const closeBuilder = () => {
     builderEl.classList.remove('open'); builderOverlay.classList.remove('open');
@@ -641,6 +675,7 @@ function setupCart(){
   select.addEventListener('change', () => {
     if (select.value && b.flavors.length < SIZES[b.size].max) b.flavors.push(select.value);
     renderBuilder();
+    select.focus();
   });
   document.getElementById('builderChips').addEventListener('click', e => {
     const rm = e.target.closest('[data-flavor-remove]');
@@ -649,8 +684,13 @@ function setupCart(){
     renderBuilder();
   });
   document.getElementById('builderConfirm').addEventListener('click', () => {
+    if (!b) return;
     let text;
-    if (b.size === 'esfiha') {
+    if (b.mode === 'combo') {
+      if (!b.flavors.length) return;
+      addCombo(b.combo, b.flavors);
+      text = `Combo ${b.combo} (${b.flavors.join(' + ')}) foi adicionado ao carrinho`;
+    } else if (b.size === 'esfiha') {
       addQty('esfihas', b.flavors[0], b.qty);
       text = `Esfiha de ${b.flavors[0]} (${b.qty}x) foi adicionada ao carrinho`;
     } else {
@@ -670,14 +710,7 @@ function setupCart(){
   document.addEventListener('click', e => {
     const add = e.target.closest('[data-add]');
     if (add) {
-      if (add.dataset.cat === 'Combo') {
-        addQty('combos', add.dataset.add, 1);
-        add.classList.add('added');
-        setTimeout(() => add.classList.remove('added'), 600);
-        showToast(`Combo ${add.dataset.add} foi adicionado ao carrinho`);
-      } else {
-        openBuilder(add.dataset.add, add);
-      }
+      openBuilder(add.dataset.add, add, add.dataset.cat === 'Combo');
       return;
     }
     const qty = e.target.closest('[data-qty]');
@@ -686,12 +719,14 @@ function setupCart(){
       changeQty(group, key, Number(delta));
       return;
     }
-    const rm = e.target.closest('[data-remove-pizza]');
-    if (rm) removePizza(rm.dataset.removePizza);
+    const rp = e.target.closest('[data-remove-pizza]');
+    if (rp) { removeById('pizzas', rp.dataset.removePizza); return; }
+    const rc = e.target.closest('[data-remove-combo]');
+    if (rc) removeById('combos', rc.dataset.removeCombo);
   });
 
   document.getElementById('cartClear').addEventListener('click', () => {
-    cart = {esfihas: {}, pizzas: [], combos: {}};
+    cart = {esfihas: {}, pizzas: [], combos: []};
     saveCart(); renderCart();
   });
 
@@ -699,6 +734,15 @@ function setupCart(){
   builderEl.addEventListener('keydown', e => trapFocus(builderEl, e));
 
   renderCart();
+}
+
+function setupToTop(){
+  const btn = document.getElementById('toTop');
+  if (!btn) return;
+  const toggle = () => { btn.hidden = window.scrollY < 600; };
+  window.addEventListener('scroll', toggle, {passive: true});
+  toggle();
+  btn.addEventListener('click', e => { e.preventDefault(); window.scrollTo({top: 0, behavior: 'smooth'}); });
 }
 
 buildMenu();
@@ -712,3 +756,4 @@ setupReveal();
 setupHeaderScroll();
 setupCounters();
 setupOpenStatus();
+setupToTop();
