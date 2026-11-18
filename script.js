@@ -1,16 +1,10 @@
 const WA_URL = 'https://wa.me/5544999187735';
 
 // Ativa o preset de fotos (bloco salvo em index.html dentro de <template id="preset-fotos">)
-const MOSTRAR_FOTOS = true;
+const MOSTRAR_FOTOS = false;
 
 // Caminho da imagem de cada bloco do preset ("" mantém o espaço reservado)
-const FOTOS = {
-  fachada: 'images/pizzaria-1.jpg',
-  pizza: 'images/pizzaria-2.jpg',
-  forno: 'images/pizzaria-3.jpg',
-  equipe: 'images/pizzaria-4.jpg',
-  fachada2: '' // fachada real: sem foto de exemplo
-};
+const FOTOS = {fachada: '', pizza: '', forno: '', equipe: '', fachada2: ''};
 
 // Fotos ilustrativas temporárias de alguns sabores (veja images/LEIA-ME.md). Troque pelas fotos reais.
 const FOTOS_SABORES = {
@@ -432,7 +426,7 @@ function setupPresetFotos(){
 // Guardado em localStorage (só para este navegador).
 const CART_KEY = 'gordo-carrinho-v3';
 const SIZES = {
-  esfiha: {label: 'Esfiha', title: 'Esfihas', max: 1},
+  esfiha: {label: 'Esfiha', title: 'Esfihas', max: 20},
   pizza: {label: 'Pizza', title: 'Pizzas (12 pedaços)', max: 3},
   metro: {label: 'Pizza de Metro', title: 'Pizzas de metro (36 pedaços)', max: 4},
   combo: {label: 'Combo', title: 'Combos', max: 4}
@@ -618,10 +612,11 @@ function setupCart(){
   const renderPicker = () => {
     const q = norm(pickerSearch.value.trim());
     const isCombo = b.mode === 'combo';
+    const isEsfiha = b.size === 'esfiha';
     let html = '';
     Object.keys(DATA).filter(k => !isCombo || k === 'salgadas').forEach(k => {
       const items = DATA[k].items.filter(it =>
-        !b.flavors.includes(it[0]) && (isCombo || !esfihaOnly(it[0])) && (!q || norm(it[0] + ' ' + it[1]).includes(q)));
+        !b.flavors.includes(it[0]) && (isCombo || isEsfiha || !esfihaOnly(it[0])) && (!q || norm(it[0] + ' ' + it[1]).includes(q)));
       if (!items.length) return;
       html += `<li class="picker-group" role="presentation">${CAT_LABEL[k]}</li>`;
       html += items.map(it => `<li class="picker-opt" role="option" tabindex="-1" aria-selected="false" data-flavor="${esc(it[0])}">
@@ -637,7 +632,7 @@ function setupCart(){
     pickerSearch.focus();
   };
   const chooseFlavor = name => {
-    if (b.flavors.length < SIZES[b.size].max) b.flavors.push(name);
+    if (b.flavors.length < SIZES[b.size].max) { b.flavors.push(name); b.qtys[name] = 1; }
     closePicker(false);
     renderBuilder();
     (pickerBtn.disabled ? document.getElementById('builderConfirm') : pickerBtn).focus();
@@ -655,34 +650,37 @@ function setupCart(){
       btn.disabled = b.only && btn.dataset.size !== 'esfiha';
     });
     const isEsfiha = b.size === 'esfiha';
-    document.getElementById('builderEsfiha').hidden = !isEsfiha;
-    document.getElementById('builderPizza').hidden = isEsfiha;
-    const confirm = document.getElementById('builderConfirm');
-    confirm.disabled = isCombo && b.flavors.length === 0;
-    if (isEsfiha) {
-      document.getElementById('builderQty').textContent = b.qty;
-      return;
-    }
+    document.getElementById('builderConfirm').disabled = isCombo && b.flavors.length === 0;
     const max = SIZES[b.size].max, full = b.flavors.length >= max;
-    document.getElementById('builderCount').textContent = `Sabores (${b.flavors.length}/${max})`;
-    document.getElementById('builderChips').innerHTML = b.flavors.map((f, i) => `
-      <li class="flavor-chip"><span>${esc(f)}</span>${(isCombo || b.flavors.length > 1)
-        ? `<button type="button" data-flavor-remove="${i}" aria-label="Remover ${esc(f)}"><svg class="ico"><use href="#i-close"/></svg></button>` : ''}</li>`
-    ).join('');
+    document.getElementById('builderCount').textContent = isEsfiha ? 'Sabores e quantidade' : `Sabores (${b.flavors.length}/${max})`;
+    document.getElementById('builderChips').innerHTML = b.flavors.map((f, i) => {
+      const rm = (isCombo || b.flavors.length > 1)
+        ? `<button type="button" data-flavor-remove="${i}" aria-label="Remover ${esc(f)}"><svg class="ico"><use href="#i-close"/></svg></button>` : '';
+      if (!isEsfiha) return `<li class="flavor-chip"><span>${esc(f)}</span>${rm}</li>`;
+      return `<li class="flavor-chip"><span>${esc(f)}</span>
+        <div class="chip-qty">
+          <button type="button" data-esf="${i}|-1" aria-label="Diminuir ${esc(f)}">−</button>
+          <span>${b.qtys[f] || 1}</span>
+          <button type="button" data-esf="${i}|1" aria-label="Aumentar ${esc(f)}"><svg class="ico"><use href="#i-plus"/></svg></button>
+        </div>${rm}</li>`;
+    }).join('');
     document.getElementById('pickerLabel').textContent = b.flavors.length ? 'Adicionar outro sabor' : 'Escolher um sabor';
     pickerBtn.disabled = full;
     if (full) closePicker(false); else if (!pickerPanel.hidden) renderPicker();
-    document.getElementById('builderHint').textContent = full
-      ? (isCombo ? 'Limite de sabores do combo atingido.' : 'Limite de sabores atingido para este tamanho.')
-      : (isCombo ? `Escolha de 1 a ${max} sabores tradicionais.` : `Você pode misturar até ${max} sabores.`);
+    const total = b.flavors.reduce((n, f) => n + (b.qtys[f] || 1), 0);
+    document.getElementById('builderHint').textContent = isEsfiha
+      ? `Total: ${total} ${total === 1 ? 'esfiha' : 'esfihas'}. Cada esfiha leva 1 sabor.`
+      : full
+        ? (isCombo ? 'Limite de sabores do combo atingido.' : 'Limite de sabores atingido para este tamanho.')
+        : (isCombo ? `Escolha de 1 a ${max} sabores tradicionais.` : `Você pode misturar até ${max} sabores.`);
   };
 
   const openBuilder = (name, from, isCombo) => {
     if (isCombo) {
-      b = {mode: 'combo', combo: name, size: 'combo', qty: 1, flavors: [], only: false};
+      b = {mode: 'combo', combo: name, size: 'combo', qtys: {}, flavors: [], only: false};
     } else {
       const only = esfihaOnly(name);
-      b = {mode: 'flavor', size: only ? 'esfiha' : lastSize, qty: 1, flavors: [name], only};
+      b = {mode: 'flavor', size: only ? 'esfiha' : lastSize, qtys: {[name]: 1}, flavors: [name], only};
     }
     opener = from;
     closePicker(false);
@@ -704,11 +702,10 @@ function setupCart(){
   builderEl.querySelectorAll('[data-size]').forEach(btn => btn.addEventListener('click', () => {
     if (btn.disabled) return;
     b.size = btn.dataset.size; lastSize = b.size;
-    if (b.size !== 'esfiha') b.flavors = b.flavors.slice(0, SIZES[b.size].max);
+    if (b.size === 'esfiha') b.flavors.forEach(f => { b.qtys[f] = b.qtys[f] || 1; });
+    else b.flavors = b.flavors.filter(f => !esfihaOnly(f)).slice(0, SIZES[b.size].max);
     renderBuilder();
   }));
-  document.getElementById('builderMinus').addEventListener('click', () => { b.qty = Math.max(1, b.qty - 1); renderBuilder(); });
-  document.getElementById('builderPlus').addEventListener('click', () => { b.qty = Math.min(99, b.qty + 1); renderBuilder(); });
   pickerBtn.addEventListener('click', () => { if (pickerPanel.hidden) openPicker(); else closePicker(true); });
   pickerSearch.addEventListener('input', renderPicker);
   pickerList.addEventListener('click', e => {
@@ -725,6 +722,15 @@ function setupCart(){
     else if (e.key === 'Enter' && i >= 0) { e.preventDefault(); chooseFlavor(opts[i].dataset.flavor); }
   });
   document.getElementById('builderChips').addEventListener('click', e => {
+    const step = e.target.closest('[data-esf]');
+    if (step) {
+      const [i, d] = step.dataset.esf.split('|');
+      const f = b.flavors[Number(i)];
+      b.qtys[f] = Math.min(99, Math.max(1, (b.qtys[f] || 1) + Number(d)));
+      renderBuilder();
+      document.querySelector('#builderChips [data-esf="' + i + '|' + d + '"]')?.focus();
+      return;
+    }
     const rm = e.target.closest('[data-flavor-remove]');
     if (!rm) return;
     b.flavors.splice(Number(rm.dataset.flavorRemove), 1);
@@ -738,8 +744,8 @@ function setupCart(){
       addCombo(b.combo, b.flavors);
       text = `Combo ${b.combo} (${b.flavors.join(' + ')}) foi adicionado ao carrinho`;
     } else if (b.size === 'esfiha') {
-      addQty('esfihas', b.flavors[0], b.qty);
-      text = `Esfiha de ${b.flavors[0]} (${b.qty}x) foi adicionada ao carrinho`;
+      b.flavors.forEach(f => addQty('esfihas', f, b.qtys[f] || 1));
+      text = `Esfihas (${b.flavors.map(f => `${b.qtys[f] || 1}x ${f}`).join(', ')}) adicionadas ao carrinho`;
     } else {
       addPizza(b.size, b.flavors);
       text = `${SIZES[b.size].label} (${b.flavors.join(' + ')}) foi adicionada ao carrinho`;
@@ -809,12 +815,15 @@ function setupSmoothScroll(){
     const start = window.scrollY;
     const to = Math.max(0, Math.min(y, root.scrollHeight - window.innerHeight));
     const dist = to - start;
-    if (reduce.matches || Math.abs(dist) < 2) {
+    if (Math.abs(dist) < 2) {
       root.style.scrollBehavior = 'auto'; window.scrollTo(0, to); root.style.scrollBehavior = '';
       if (done) done();
       return;
     }
-    const dur = Math.min(1100, Math.max(550, Math.abs(dist) * 0.45));
+    // com "reduzir movimento" ligado no sistema, a mesma curva roda mais curta
+    const dur = reduce.matches
+      ? Math.min(600, Math.max(300, Math.abs(dist) * 0.25))
+      : Math.min(1100, Math.max(550, Math.abs(dist) * 0.45));
     const t0 = performance.now();
     root.style.scrollBehavior = 'auto';
     const step = now => {

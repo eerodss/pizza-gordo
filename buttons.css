@@ -443,3 +443,65 @@
 .to-top {
   right: 24px;
 }
+
+/* Contato: os três botões descem para a base do cartão e ficam na mesma linha */
+.info-card .mini-btn {
+  margin-top: auto;
+}
+
+/* Esfiha: quantidade de cada sabor dentro da lista */
+.flavor-chip > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.chip-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip-qty > span {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.chip-qty button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--r-ctl);
+  background: transparent;
+  color: var(--cream);
+  font: 600 18px/1 'Montserrat', system-ui, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.18s var(--ease-press), background-color 0.18s, border-color 0.18s;
+}
+
+.chip-qty button .ico {
+  width: 16px;
+  height: 16px;
+}
+
+.chip-qty button:hover {
+  border-color: var(--cream);
+  background: rgba(226, 255, 255, 0.08);
+}
+
+.chip-qty button:active {
+  transform: scale(0.94);
+}
+
+@media (pointer: coarse) {
+  .chip-qty button {
+    width: 44px;
+    height: 44px;
+  }
+}
