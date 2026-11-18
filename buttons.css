@@ -8,15 +8,17 @@
              verde = ir para o WhatsApp
              contorno = ação secundária
    Estados:  hover sobe 1px, clique afunda, foco com anel creme, desativado a 40%. */
-
 :root {
+  --wash: color-mix(in srgb, var(--cream) 8%, transparent);
+  --ink-soft: #2c566f; /* texto secundário sobre o fundo creme */
+  --shadow-btn: 0 8px 20px rgba(0, 0, 0, 0.28);
+  --shadow-fab: 0 8px 22px rgba(0, 0, 0, 0.4);
   --r-ctl: 10px;
   --ctl-h: 48px;
   --ctl-h-lg: 54px;
   --ctl-h-sm: 44px;
   --ease-press: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-
 /* ---------- Base dos botões de texto ---------- */
 .btn,
 .mini-btn,
@@ -47,7 +49,6 @@
   transition: transform 0.18s var(--ease-press), background-color 0.18s, border-color 0.18s,
     color 0.18s, box-shadow 0.18s, filter 0.18s;
 }
-
 .btn .ico,
 .mini-btn .ico,
 .add-btn .ico,
@@ -57,7 +58,6 @@
   height: 18px;
   flex-shrink: 0;
 }
-
 /* ---------- Tamanhos ---------- */
 .btn,
 .cart-send {
@@ -65,7 +65,6 @@
   padding: 0 28px;
   font-size: 16px;
 }
-
 .mini-btn,
 .more-btn,
 .cart-clear,
@@ -75,17 +74,14 @@
   padding: 0 18px;
   font-size: 14px;
 }
-
 .add-btn {
   width: 100%;
 }
-
 .cart-send,
 .cart-clear,
 .mini-btn {
   width: 100%;
 }
-
 /* ---------- Contorno (secundário) ---------- */
 .btn-outline,
 .mini-btn,
@@ -96,16 +92,14 @@
   background: transparent;
   color: var(--cream);
 }
-
 .btn-outline:hover,
 .mini-btn:hover,
 .more-btn:hover,
 .cart-clear:hover,
 .cart-btn:hover {
   border-color: var(--cream);
-  background: rgba(226, 255, 255, 0.08);
+  background: var(--wash);
 }
-
 /* ---------- Creme (ação do site) ---------- */
 .btn-primary,
 .add-btn,
@@ -114,14 +108,12 @@
   background: var(--cream);
   color: var(--navy-deeper);
 }
-
 .btn-primary:hover,
 .add-btn:hover,
 .toast button:hover {
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--shadow-btn);
   filter: brightness(1.04);
 }
-
 /* ---------- Verde (WhatsApp) ---------- */
 .btn-wa,
 .cart-send,
@@ -131,16 +123,14 @@
   background: var(--wa);
   color: var(--wa-ink);
 }
-
 .btn-wa:hover,
 .cart-send:hover,
 .info-card.whatsapp .mini-btn:hover {
   border-color: var(--wa);
   background: var(--wa);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--shadow-btn);
   filter: brightness(1.05);
 }
-
 /* ---------- Movimento comum: sobe no hover, afunda no clique ---------- */
 .btn:hover,
 .mini-btn:hover,
@@ -152,7 +142,6 @@
 .toast button:hover {
   transform: translateY(-1px);
 }
-
 .btn:active,
 .mini-btn:active,
 .add-btn:active,
@@ -165,7 +154,6 @@
   box-shadow: none;
   filter: none;
 }
-
 /* ---------- Desativado ---------- */
 .btn:disabled,
 .add-btn:disabled,
@@ -179,16 +167,13 @@
   box-shadow: none;
   filter: none;
 }
-
 /* ---------- Carrinho no cabeçalho ---------- */
 .cart-btn {
   position: relative;
 }
-
 .cart-label {
   font-weight: 600;
 }
-
 .cart-count {
   position: absolute;
   top: -9px;
@@ -203,13 +188,11 @@
   font: 700 12px/18px 'Montserrat', system-ui, sans-serif;
   text-align: center;
 }
-
 /* ---------- Botão "Ver mais sabores" ---------- */
 .more-btn {
   width: fit-content;
   margin: 28px auto 0;
 }
-
 /* ---------- Opções: abas do cardápio e tamanho ---------- */
 .cat-tab,
 .size-pick button {
@@ -226,13 +209,11 @@
   transition: transform 0.18s var(--ease-press), background-color 0.18s, border-color 0.18s,
     color 0.18s;
 }
-
 .cat-tab {
   flex-shrink: 0;
   min-height: var(--ctl-h-sm);
   padding: 0 20px;
 }
-
 .size-pick button {
   display: flex;
   flex-direction: column;
@@ -244,47 +225,39 @@
   color: var(--cream);
   font-weight: 700;
 }
-
 .size-pick button small {
   font-size: 11.5px;
   font-weight: 500;
   line-height: 1.35;
   color: var(--cream-dim);
 }
-
 .cat-tab:hover,
 .size-pick button:hover:not(:disabled):not(.active) {
   border-color: var(--cream);
   color: var(--cream);
 }
-
 .cat-tab:active,
 .size-pick button:active:not(:disabled) {
   transform: scale(0.97);
 }
-
 .cat-tab.active,
 .size-pick button.active {
   border-color: var(--cream);
   background: var(--cream);
   color: var(--navy-deeper);
 }
-
 .size-pick button.active small {
-  color: #2c566f;
+  color: var(--ink-soft);
 }
-
 .size-pick button:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
-
 /* ---------- Botões só de ícone ---------- */
 .cart-x,
 .cart-qty button,
 .cart-remove,
 .flavor-chip button,
-.builder-qty button,
 .search-box button {
   display: inline-flex;
   align-items: center;
@@ -303,47 +276,38 @@
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.18s var(--ease-press), background-color 0.18s, border-color 0.18s;
 }
-
 .cart-x .ico,
 .cart-qty button .ico,
 .cart-remove .ico,
-.builder-qty button .ico,
 .search-box button .ico {
   width: 18px;
   height: 18px;
 }
-
 .cart-x:hover,
 .cart-qty button:hover,
 .cart-remove:hover,
 .flavor-chip button:hover,
-.builder-qty button:hover,
 .search-box button:hover {
   border-color: var(--cream);
-  background: rgba(226, 255, 255, 0.08);
+  background: var(--wash);
 }
-
 .cart-x:active,
 .cart-qty button:active,
 .cart-remove:active,
 .flavor-chip button:active,
-.builder-qty button:active,
 .search-box button:active {
   transform: scale(0.94);
 }
-
 /* Dentro de um sabor escolhido: sem moldura até o hover */
 .flavor-chip button {
   width: 36px;
   height: 36px;
   border-color: transparent;
 }
-
 .flavor-chip button .ico {
   width: 16px;
   height: 16px;
 }
-
 /* Limpar a busca: dentro do campo, sem moldura */
 .search-box button {
   position: absolute;
@@ -354,11 +318,9 @@
   margin-top: -20px;
   border-color: transparent;
 }
-
 .cart-qty {
   gap: 8px;
 }
-
 /* ---------- Botões flutuantes (redondos) ---------- */
 .wa-float,
 .to-top {
@@ -370,11 +332,10 @@
   justify-content: center;
   border-radius: 50%;
   text-decoration: none;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-fab);
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.18s var(--ease-press), background-color 0.18s, filter 0.18s;
 }
-
 .wa-float {
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   width: 56px;
@@ -384,12 +345,10 @@
   color: var(--wa-ink);
   animation: none;
 }
-
 .wa-float .ico {
   width: 28px;
   height: 28px;
 }
-
 .to-top {
   bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   width: 48px;
@@ -398,75 +357,62 @@
   background: var(--navy-deeper);
   color: var(--cream);
 }
-
 .to-top .ico {
   width: 22px;
   height: 22px;
 }
-
 .wa-float:hover,
 .to-top:hover {
   transform: translateY(-2px);
 }
-
 .wa-float:hover {
   filter: brightness(1.06);
 }
-
 .to-top:hover {
   border-color: var(--cream);
   background: var(--navy-deep);
 }
-
 .wa-float:active,
 .to-top:active {
   transform: scale(0.95);
 }
-
 /* ---------- Celular ---------- */
-@media (max-width: 520px) {
-  .hero-ctas .btn,
+@media (max-width: 520px) {.hero-ctas .btn,
   .final-cta .btn {
     width: 100%;
   }
-}
 
+}
 /* Telas de toque: o botão de remover sabor também chega a 44px */
-@media (pointer: coarse) {
-  .flavor-chip button {
+@media (pointer: coarse) {.flavor-chip button {
     width: 44px;
     height: 44px;
   }
-}
 
+}
 /* O botão de topo fica no mesmo eixo do WhatsApp (56px de largura contra 48px) */
 .to-top {
   right: 24px;
 }
-
 /* Contato: os três botões descem para a base do cartão e ficam na mesma linha */
 .info-card .mini-btn {
   margin-top: auto;
 }
-
 /* Esfiha: quantidade de cada sabor dentro da lista */
 .flavor-chip > span:first-child {
   flex: 1;
   min-width: 0;
 }
-
 .chip-qty {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
 .chip-qty > span {
   min-width: 28px;
   text-align: center;
   font-weight: 700;
 }
-
 .chip-qty button {
   display: inline-flex;
   align-items: center;
@@ -484,24 +430,21 @@
   touch-action: manipulation;
   transition: transform 0.18s var(--ease-press), background-color 0.18s, border-color 0.18s;
 }
-
 .chip-qty button .ico {
   width: 16px;
   height: 16px;
 }
-
 .chip-qty button:hover {
   border-color: var(--cream);
-  background: rgba(226, 255, 255, 0.08);
+  background: var(--wash);
 }
-
 .chip-qty button:active {
   transform: scale(0.94);
 }
-
-@media (pointer: coarse) {
-  .chip-qty button {
+@media (pointer: coarse) {.chip-qty button {
     width: 44px;
     height: 44px;
   }
+
 }
+

@@ -844,7 +844,10 @@ function setupSmoothScroll(){
     const el = document.querySelector(id);
     if (!el) return;
     e.preventDefault();
-    scrollToY(el.getBoundingClientRect().top + window.scrollY - offset(), () => history.replaceState(null, '', id));
+    scrollToY(el.getBoundingClientRect().top + window.scrollY - offset(), () => {
+      history.replaceState(null, '', id);
+      if (el.hasAttribute('tabindex')) el.focus({preventScroll: true});
+    });
   });
 }
 
