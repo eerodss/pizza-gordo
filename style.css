@@ -1525,3 +1525,37 @@ footer a::after {
     transition: opacity 0.2s;
   }
 }
+
+/* ===== Top 10: cards que levam ao sabor no cardápio ===== */
+a.top-card {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+.top-go {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--cream-dim);
+  transition: transform 0.18s var(--ease-press, ease), color 0.18s;
+}
+a.top-card:hover .top-go,
+a.top-card:focus-visible .top-go {
+  color: var(--cream);
+  transform: translateY(3px);
+}
+.item-card:focus {
+  outline: none;
+}
+.item-card.flash {
+  border-color: var(--cream);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cream) 35%, transparent), 0 12px 30px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.3s, border-color 0.3s;
+}
+@media (prefers-reduced-motion: reduce) {
+  a.top-card:hover .top-go,
+  a.top-card:focus-visible .top-go {
+    transform: none;
+  }
+}

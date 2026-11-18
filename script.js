@@ -131,9 +131,13 @@ function waLink(msg){
   return `${WA_URL}?text=${encodeURIComponent(msg)}`;
 }
 
-function renderItems(items, catLabel){
+function slug(s){
+  return norm(s).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function renderItems(items, catLabel, withIds){
   return '<div class="item-grid">' + items.map(it => `
-    <article class="item-card">
+    <article class="item-card"${withIds ? ` id="sabor-${slug(it[0])}" tabindex="-1"` : ''}>
       <div class="item-photo">
         ${flavorPhoto(it) ? `<img src="${flavorPhoto(it)}" alt="${esc(it[0])} (foto ilustrativa)" loading="lazy">` : '<i class="ti ti-photo"></i>'}
         ${TOP10.includes(it[0]) ? '<span class="tag">Top 10</span>' : ''}
@@ -157,7 +161,7 @@ function buildMenu(){
     const g = DATA[key];
     html += `<div class="menu-group" id="grp-${key}" data-cat="${key}" role="tabpanel">
       ${renderPrices(g.prices)}
-      ${renderItems(g.items, CAT_LABEL[key])}
+      ${renderItems(g.items, CAT_LABEL[key], true)}
     </div>`;
   }
   html += `<div class="menu-group" id="grp-bordas" data-cat="bordas" role="tabpanel">
@@ -200,11 +204,12 @@ function buildMenu(){
     let it = null;
     for (const k in DATA) { const f = DATA[k].items.find(x => x[0] === name); if (f) { it = f; break; } }
     if (!it) return '';
-    return `<div class="top-card reveal">
+    return `<a class="top-card reveal" href="#sabor-${slug(name)}" data-sabor="${esc(name)}" aria-label="Ver ${esc(name)} no cardápio">
       <div class="top-num">${String(i + 1).padStart(2, '0')}</div>
       ${flavorPhoto(it) ? `<img class="top-img" src="${flavorPhoto(it)}" alt="${esc(name)} (foto ilustrativa)" loading="lazy">` : ''}
       <div class="top-body"><h3>${name}</h3><p>${it[1]}</p>${it[4] ? `<p class="tp">Pizza a partir de ${it[4]}</p>` : ''}</div>
-    </div>`;
+      <svg class="ico top-go" aria-hidden="true"><use href="#i-chevron"/></svg>
+    </a>`;
   }).join('');
 
   document.getElementById('grp-salgadas').classList.add('active');
@@ -798,13 +803,42 @@ function setupToTop(){
   toggle();
 }
 
+// Top 10: abre a aba do sabor e libera o card (a rolagem animada vem depois, no manipulador geral)
+function setupTopLinks(){
+  document.addEventListener('click', e => {
+    const link = e.target.closest('a.top-card');
+    if (!link) return;
+    const name = link.dataset.sabor;
+    const key = Object.keys(DATA).find(k => DATA[k].items.some(it => it[0] === name));
+    if (!key) return;
+    const input = document.getElementById('menuSearch');
+    if (input && input.value) { input.value = ''; input.dispatchEvent(new Event('input')); }
+    const tab = document.querySelector('.cat-tab[data-cat="' + key + '"]');
+    if (tab && !tab.classList.contains('active')) tab.click();
+    const card = document.getElementById('sabor-' + slug(name));
+    if (card && card.hidden) {
+      const more = card.closest('.menu-group') && card.closest('.menu-group').querySelector('.more-btn');
+      if (more) more.click();
+    }
+  });
+}
+
+// Destaque curto no sabor de destino
+function flashCard(el){
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 2200);
+}
+
 // Rolagem dos links internos: acelera no começo e freia ao chegar (ease-in-out)
 function setupSmoothScroll(){
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const root = document.documentElement;
   let raf = 0;
   const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-  const offset = () => (document.querySelector('header')?.offsetHeight || 0) + 12;
+  const offset = el => {
+    const tabs = el && el.closest('.menu-wrap') ? document.querySelector('.menu-toolbar') : null;
+    return (document.querySelector('header')?.offsetHeight || 0) + (tabs ? tabs.offsetHeight + 24 : 12);
+  };
   const stop = () => {
     if (!raf) return;
     cancelAnimationFrame(raf); raf = 0;
@@ -844,9 +878,10 @@ function setupSmoothScroll(){
     const el = document.querySelector(id);
     if (!el) return;
     e.preventDefault();
-    scrollToY(el.getBoundingClientRect().top + window.scrollY - offset(), () => {
+    scrollToY(el.getBoundingClientRect().top + window.scrollY - offset(el), () => {
       history.replaceState(null, '', id);
       if (el.hasAttribute('tabindex')) el.focus({preventScroll: true});
+      if (el.classList.contains('item-card')) flashCard(el);
     });
   });
 }
@@ -863,4 +898,5 @@ setupHeaderScroll();
 setupCounters();
 setupOpenStatus();
 setupToTop();
+setupTopLinks();
 setupSmoothScroll();
