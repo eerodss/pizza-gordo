@@ -27,6 +27,7 @@
   <symbol id="i-pin-c" viewBox="0 0 24 24"><path fill="#F25C54" d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3" fill="#03233b"/></symbol>
   <symbol id="i-ig-c" viewBox="0 0 24 24" fill="none" stroke="url(#igGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.51"/></symbol>
   <symbol id="i-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></symbol>
   <symbol id="i-plus"viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></symbol>
   <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
@@ -387,8 +388,15 @@
   <div id="builderPizza" hidden>
     <p class="builder-label" id="builderCount">Sabores</p>
     <ul class="flavor-chips" id="builderChips"></ul>
-    <label class="visually-hidden" for="builderSelect">Adicionar outro sabor</label>
-    <select id="builderSelect"></select>
+    <div class="flavor-picker">
+      <button type="button" class="picker-btn" id="pickerBtn" aria-haspopup="listbox" aria-expanded="false" aria-controls="pickerPanel">
+        <span id="pickerLabel">Escolher um sabor</span><svg class="ico"><use href="#i-chevron"/></svg>
+      </button>
+      <div class="picker-panel" id="pickerPanel" hidden>
+        <div class="picker-search"><i class="ti ti-search"></i><input type="search" id="pickerSearch" placeholder="Buscar sabor ou ingrediente" aria-label="Buscar sabor" autocomplete="off"></div>
+        <ul class="picker-list" id="pickerList" role="listbox" aria-label="Sabores disponíveis"></ul>
+      </div>
+    </div>
     <p class="builder-hint" id="builderHint"></p>
   </div>
 

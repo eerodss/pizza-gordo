@@ -3,9 +3,9 @@ const MINI_PIZZA = {
   // Imagens ilustrativas: coloque o caminho (ex.: 'images/mini-1.jpg').
   // Com src vazio, aparece um espaço reservado no lugar da foto.
   fotos: [
-    {src: '', alt: 'Mini pizza congelada'},
-    {src: '', alt: 'Mini pizza congelada pronta para servir'},
-    {src: '', alt: 'Embalagem da mini pizza congelada'}
+    {src: 'images/mini-1.jpg', alt: 'Mini pizza congelada (foto ilustrativa)'},
+    {src: 'images/mini-2.jpg', alt: 'Mini pizzas prontas para servir (foto ilustrativa)'},
+    {src: 'images/pizza-2.jpg', alt: 'Pizza na caixa (foto ilustrativa)'}
   ],
 
   // Sabores disponíveis (ex.: ['Calabresa', 'Muçarela']). Vazio esconde o bloco.

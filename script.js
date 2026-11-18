@@ -4,7 +4,13 @@ const WA_URL = 'https://wa.me/5544999187735';
 const MOSTRAR_FOTOS = true;
 
 // Caminho da imagem de cada bloco do preset ("" mantém o espaço reservado)
-const FOTOS = {fachada: '', pizza: '', forno: '', equipe: '', fachada2: ''};
+const FOTOS = {
+  fachada: 'images/pizzaria-1.jpg',
+  pizza: 'images/pizzaria-2.jpg',
+  forno: 'images/pizzaria-3.jpg',
+  equipe: 'images/pizzaria-4.jpg',
+  fachada2: '' // fachada real: sem foto de exemplo
+};
 
 // Fotos ilustrativas temporárias de alguns sabores (veja images/LEIA-ME.md). Troque pelas fotos reais.
 const FOTOS_SABORES = {
@@ -410,9 +416,10 @@ function setupPresetFotos(){
     if (!src) return;
     const img = document.createElement('img');
     img.src = src;
-    img.alt = el.querySelector('.ph-content span').textContent;
+    img.alt = el.querySelector('.ph-content span').textContent + ' (foto ilustrativa)';
     img.loading = 'lazy';
     el.querySelector('.ph-content').remove();
+    el.classList.add('filled');
     el.append(img);
   });
   const [aboutPhoto, gallery] = [fotos.querySelector('.photo-placeholder'), fotos.querySelector('.gallery-strip')];
@@ -553,20 +560,10 @@ function esfihaOnly(name){
   return !!it && /exclusivo p\/ esfiha/i.test(it[1]);
 }
 
-// Opções do seletor de sabores. Combos usam só os sabores tradicionais (inclui os exclusivos de esfiha).
-function flavorOptions(chosen, isCombo){
-  return Object.keys(DATA).filter(k => !isCombo || k === 'salgadas').map(k => {
-    const opts = DATA[k].items
-      .filter(it => !chosen.includes(it[0]) && (isCombo || !esfihaOnly(it[0])))
-      .map(it => `<option value="${esc(it[0])}">${esc(it[0])}</option>`).join('');
-    return opts ? `<optgroup label="${CAT_LABEL[k]}">${opts}</optgroup>` : '';
-  }).join('');
-}
-
 // Mantém o Tab dentro da janela aberta (carrinho ou montagem do pedido)
 function trapFocus(el, e){
   if (e.key !== 'Tab') return;
-  const items = [...el.querySelectorAll('a[href],button:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')]
+  const items = [...el.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')]
     .filter(x => x.offsetParent !== null);
   if (!items.length) return;
   const first = items[0], last = items[items.length - 1];
@@ -606,8 +603,45 @@ function setupCart(){
   // Montagem do pedido: tamanho (esfiha, pizza ou metro) e sabores; combos só escolhem sabores
   const builderEl = document.getElementById('builder');
   const builderOverlay = document.getElementById('builderOverlay');
-  const select = document.getElementById('builderSelect');
+  const pickerBtn = document.getElementById('pickerBtn');
+  const pickerPanel = document.getElementById('pickerPanel');
+  const pickerSearch = document.getElementById('pickerSearch');
+  const pickerList = document.getElementById('pickerList');
   let b = null, opener = null, lastSize = 'pizza';
+
+  // Lista de sabores: abre por baixo do botão, com busca e grupos por categoria
+  const closePicker = refocus => {
+    pickerPanel.hidden = true;
+    pickerBtn.setAttribute('aria-expanded', 'false');
+    if (refocus) pickerBtn.focus();
+  };
+  const renderPicker = () => {
+    const q = norm(pickerSearch.value.trim());
+    const isCombo = b.mode === 'combo';
+    let html = '';
+    Object.keys(DATA).filter(k => !isCombo || k === 'salgadas').forEach(k => {
+      const items = DATA[k].items.filter(it =>
+        !b.flavors.includes(it[0]) && (isCombo || !esfihaOnly(it[0])) && (!q || norm(it[0] + ' ' + it[1]).includes(q)));
+      if (!items.length) return;
+      html += `<li class="picker-group" role="presentation">${CAT_LABEL[k]}</li>`;
+      html += items.map(it => `<li class="picker-opt" role="option" tabindex="-1" aria-selected="false" data-flavor="${esc(it[0])}">
+        <span class="picker-name">${esc(it[0])}</span><span class="picker-desc">${esc(it[1])}</span></li>`).join('');
+    });
+    pickerList.innerHTML = html || '<li class="picker-empty" role="presentation">Nenhum sabor encontrado.</li>';
+  };
+  const openPicker = () => {
+    pickerPanel.hidden = false;
+    pickerBtn.setAttribute('aria-expanded', 'true');
+    pickerSearch.value = '';
+    renderPicker();
+    pickerSearch.focus();
+  };
+  const chooseFlavor = name => {
+    if (b.flavors.length < SIZES[b.size].max) b.flavors.push(name);
+    closePicker(false);
+    renderBuilder();
+    (pickerBtn.disabled ? document.getElementById('builderConfirm') : pickerBtn).focus();
+  };
 
   const renderBuilder = () => {
     const isCombo = b.mode === 'combo';
@@ -635,8 +669,9 @@ function setupCart(){
       <li class="flavor-chip"><span>${esc(f)}</span>${(isCombo || b.flavors.length > 1)
         ? `<button type="button" data-flavor-remove="${i}" aria-label="Remover ${esc(f)}"><svg class="ico"><use href="#i-close"/></svg></button>` : ''}</li>`
     ).join('');
-    select.innerHTML = `<option value="">${b.flavors.length ? 'Adicionar outro sabor' : 'Escolha um sabor'}</option>` + flavorOptions(b.flavors, isCombo);
-    select.disabled = full;
+    document.getElementById('pickerLabel').textContent = b.flavors.length ? 'Adicionar outro sabor' : 'Escolher um sabor';
+    pickerBtn.disabled = full;
+    if (full) closePicker(false); else if (!pickerPanel.hidden) renderPicker();
     document.getElementById('builderHint').textContent = full
       ? (isCombo ? 'Limite de sabores do combo atingido.' : 'Limite de sabores atingido para este tamanho.')
       : (isCombo ? `Escolha de 1 a ${max} sabores tradicionais.` : `Você pode misturar até ${max} sabores.`);
@@ -650,14 +685,16 @@ function setupCart(){
       b = {mode: 'flavor', size: only ? 'esfiha' : lastSize, qty: 1, flavors: [name], only};
     }
     opener = from;
+    closePicker(false);
     renderBuilder();
     builderEl.classList.add('open'); builderOverlay.classList.add('open');
     builderEl.setAttribute('aria-hidden', 'false');
-    (isCombo ? select : (builderEl.querySelector('[data-size].active') || builderEl.querySelector('[data-size]'))).focus();
+    (isCombo ? pickerBtn : (builderEl.querySelector('[data-size].active') || builderEl.querySelector('[data-size]'))).focus();
   };
   const closeBuilder = () => {
     builderEl.classList.remove('open'); builderOverlay.classList.remove('open');
     builderEl.setAttribute('aria-hidden', 'true');
+    closePicker(false);
     if (opener) opener.focus();
     b = null;
   };
@@ -672,10 +709,20 @@ function setupCart(){
   }));
   document.getElementById('builderMinus').addEventListener('click', () => { b.qty = Math.max(1, b.qty - 1); renderBuilder(); });
   document.getElementById('builderPlus').addEventListener('click', () => { b.qty = Math.min(99, b.qty + 1); renderBuilder(); });
-  select.addEventListener('change', () => {
-    if (select.value && b.flavors.length < SIZES[b.size].max) b.flavors.push(select.value);
-    renderBuilder();
-    select.focus();
+  pickerBtn.addEventListener('click', () => { if (pickerPanel.hidden) openPicker(); else closePicker(true); });
+  pickerSearch.addEventListener('input', renderPicker);
+  pickerList.addEventListener('click', e => {
+    const opt = e.target.closest('[data-flavor]');
+    if (opt) chooseFlavor(opt.dataset.flavor);
+  });
+  pickerPanel.addEventListener('keydown', e => {
+    const opts = [...pickerList.querySelectorAll('[data-flavor]')];
+    const i = opts.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); (opts[i + 1] || opts[0])?.focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); if (i <= 0) pickerSearch.focus(); else opts[i - 1].focus(); }
+    else if (e.key === 'Home' && i >= 0) { e.preventDefault(); opts[0].focus(); }
+    else if (e.key === 'End' && i >= 0) { e.preventDefault(); opts[opts.length - 1].focus(); }
+    else if (e.key === 'Enter' && i >= 0) { e.preventDefault(); chooseFlavor(opts[i].dataset.flavor); }
   });
   document.getElementById('builderChips').addEventListener('click', e => {
     const rm = e.target.closest('[data-flavor-remove]');
@@ -703,7 +750,8 @@ function setupCart(){
 
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
-    if (builderEl.classList.contains('open')) closeBuilder();
+    if (!pickerPanel.hidden) closePicker(true);
+    else if (builderEl.classList.contains('open')) closeBuilder();
     else if (panel.classList.contains('open')) closeCart();
   });
 
@@ -742,7 +790,53 @@ function setupToTop(){
   const toggle = () => { btn.hidden = window.scrollY < 600; };
   window.addEventListener('scroll', toggle, {passive: true});
   toggle();
-  btn.addEventListener('click', e => { e.preventDefault(); window.scrollTo({top: 0, behavior: 'smooth'}); });
+}
+
+// Rolagem dos links internos: acelera no começo e freia ao chegar (ease-in-out)
+function setupSmoothScroll(){
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const root = document.documentElement;
+  let raf = 0;
+  const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  const offset = () => (document.querySelector('header')?.offsetHeight || 0) + 12;
+  const stop = () => {
+    if (!raf) return;
+    cancelAnimationFrame(raf); raf = 0;
+    root.style.scrollBehavior = '';
+  };
+  const scrollToY = (y, done) => {
+    stop();
+    const start = window.scrollY;
+    const to = Math.max(0, Math.min(y, root.scrollHeight - window.innerHeight));
+    const dist = to - start;
+    if (reduce.matches || Math.abs(dist) < 2) {
+      root.style.scrollBehavior = 'auto'; window.scrollTo(0, to); root.style.scrollBehavior = '';
+      if (done) done();
+      return;
+    }
+    const dur = Math.min(1100, Math.max(550, Math.abs(dist) * 0.45));
+    const t0 = performance.now();
+    root.style.scrollBehavior = 'auto';
+    const step = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      window.scrollTo(0, start + dist * ease(p));
+      if (p < 1) raf = requestAnimationFrame(step);
+      else { raf = 0; root.style.scrollBehavior = ''; if (done) done(); }
+    };
+    raf = requestAnimationFrame(step);
+  };
+  // a pessoa assume o controle assim que rola, toca ou digita
+  ['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, stop, {passive: true}));
+  document.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+    const id = a.getAttribute('href');
+    if (id === '#') { e.preventDefault(); scrollToY(0); return; }
+    const el = document.querySelector(id);
+    if (!el) return;
+    e.preventDefault();
+    scrollToY(el.getBoundingClientRect().top + window.scrollY - offset(), () => history.replaceState(null, '', id));
+  });
 }
 
 buildMenu();
@@ -757,3 +851,4 @@ setupHeaderScroll();
 setupCounters();
 setupOpenStatus();
 setupToTop();
+setupSmoothScroll();

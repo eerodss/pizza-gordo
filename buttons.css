@@ -438,3 +438,8 @@
     height: 44px;
   }
 }
+
+/* O botão de topo fica no mesmo eixo do WhatsApp (56px de largura contra 48px) */
+.to-top {
+  right: 24px;
+}
